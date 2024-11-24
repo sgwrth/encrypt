@@ -10,8 +10,10 @@
 <body>
     <h1>Encrypt/Decrypt</h1>
     <p>Using WCA</p>
+
     <hr>
-    <label for="dataInput">IV</label>
+
+    <label for="dataInput">Data</label>
     <div>
         <input id="dataInput" type="text" placeholder="Data" />
     </div>
@@ -45,12 +47,39 @@
     <div>
         <div id="decData"></div>
     </div>
+
+    <hr>
+
+    <label for="encDataInput">Encoded Data</label>
+    <div>
+        <input id="encDataInput" type="text" placeholder="Encoded Data" />
+    </div>
+    <br />
+
+    <label for="decryptBtn">Decrypt Data</label>
+    <div>
+        <button id="decryptBtn" type="button">Decrypt</button>
+    </div>
+    <br />
+
 </body>
 <script>
 
-const myData = '0123456789abcdefghijklmnopqrstuvwxyz';
-const myIv = 'foo';
-const myKey = 'abcdefghabcdefghabcdefgh';
+// const myData = '0123456789abcdefghijklmnopqrstuvwxyz';
+// const myIv = 'foo';
+// const myKey = 'abcdefghabcdefghabcdefgh';
+
+// not working
+const decryptBtn = document.getElementById('decryptBtn');
+decryptBtn.addEventListener('click', async () => {
+    const encryptedData = String(document.getElementById('encDataInput').value);
+    console.log('encrypted data: ', encryptedData);
+    const decryptedData = await decryptData(
+            makeIv(String(document.getElementById('ivInput').value)),
+            String(document.getElementById('keyInput').value),
+            bufferFromString(encryptedData));
+    // console.log(stringFromBuffer(decryptedData));
+});
 
 const encryptBtn = document.getElementById('encryptBtn');
 encryptBtn.addEventListener('click', () => {
@@ -58,7 +87,7 @@ encryptBtn.addEventListener('click', () => {
 });
 
 function bufferFromString(string) {
-    const textEncoder = new TextEncoder()
+    const textEncoder = new TextEncoder('utf-8');
     return textEncoder.encode(string);
 }
 
@@ -126,19 +155,54 @@ function stringFromBuffer(buffer) {
 
 async function getDecryptedData(iv, myData, myKey) {
     const encData = await encryptData(iv, myData, myKey);
-    console.log('encoded data: ', stringFromBuffer(encData));
-    const encDataDiv = document.getElementById('encData');
-    encDataDiv.innerHTML = stringFromBuffer(encData);
+    console.log('encData', encData);
+
+    const uint8View = new Uint8Array(encData);
+    const binaryString = Array.prototype.map.call(uint8View, (c) => String.fromCharCode(c)).join('');
+    console.log('binary string: ', binaryString);
+
+    const blob = new Blob(uint8View, { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'example.bin';
+    a.click();
+    URL.revokeObjectURL(url);
+    // encDataString = btoa(encData);
+    // const encDataString = btoa(String.fromCharCode(...new Uint8Array(encData)));
+    // console.log('encData after btoa: ', encDataString);
+    // const encDataDiv = document.getElementById('encData');
+    // encDataDiv.innerHTML = encDataString;
+    
+    // const ciphertext = atob(encDataString);
+    // const ciphertextBuffer = new TextEncoder('utf-8').encode(ciphertext).buffer;
+    // console.log(ciphertextBuffer);
+    // const base64Buffer = new Uint8Array(ciphertextBuffer.length).buffer;
+    // for (let i = 0; i < ciphertextBuffer.length; i++) {
+        // base64Buffer[i] = String.fromCharCode(ciphertextBuffer.charCodeAt(i));
+    // }
+
+    // console.log('ciphertextBuffer', ciphertextBuffer);
+
     const decData = decryptData(iv, myKey, encData)
+    // const decData = decryptData(iv, myKey, ciphertextBuffer)
             .then((data) => {
                 console.log('decoded data: ', stringFromBuffer(data));
                 const decDataDiv = document.getElementById('decData');
                 decDataDiv.innerHTML = stringFromBuffer(data);
-            });
+            })
+            .catch((err) => console.error(err));
 }
 
 // getDecryptedData(makeIv(myIv), myData, myKey);
 // getDecryptedData(makeIv('hurzhurzhurz'), 'bleh', 'barbarbarbarbarbarbarbar');
+
+// const encryptedData = bufferFromString('W29iamVjdCBBcnJheUJ1ZmZlcl0=');
+// console.log(encryptedData);
+
+// decryptData(makeIv('hurzhurzhurz'), 'barbarbarbarbarbarbarbar', bufferFromString(atob('W29iamVjdCBBcnJheUJ1ZmZlcl0=')).buffer)
+//     .then((data) => console.log('...: ', stringFromBuffer(data)))
+//     .catch((err) => console.error(err));
 
 </script>
 </html>
