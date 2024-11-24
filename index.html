@@ -14,21 +14,18 @@
 <script>
 
 const myData = '0123456789abcdefghijklmnopqrstuvwxyz';
-const ivInput = 'foo';
-const iv = ivInput + ivInput + ivInput + ivInput;
-console.log(iv);
-const ivTest2 = new TextEncoder('utf-8').encode(iv);
+const myIv = 'foo';
+const myIvExpanded = myIv + myIv + myIv + myIv;
+const iv = new TextEncoder('utf-8').encode(myIvExpanded);
 
 const keyInput = 'abcdefghabcdefghabcdefgh';
 
 async function makeKey(keyInput) {
     const keyBase64 = btoa(keyInput);
-    console.log('keyBase64: ', keyBase64);
     const keyBuffer = new Uint8Array(keyBase64.length);
     for (let i = 0; i < keyBase64.length; i++) {
         keyBuffer[i] = String.fromCharCode(keyBase64.charCodeAt(i));
     }
-    console.log('buffer: ', keyBuffer.length);
     const cryptoKey = await window.crypto.subtle.importKey(
         'raw',
         keyBuffer,
@@ -40,23 +37,17 @@ async function makeKey(keyInput) {
 };
 
 async function encryptData(message, keyInput) {
+    console.log('plaintext data: ', myData);
     const resolvedKey = await makeKey(keyInput);
     const encodedMessage = new TextEncoder().encode(message);
     const encryptedData = await window.crypto.subtle.encrypt(
         {
             name: "AES-GCM",
-            iv: ivTest2
+            iv: iv
         },
         resolvedKey,
         encodedMessage
-    )
-    .then((encrypted) => {
-        console.log(new TextDecoder('utf-8').decode(encrypted));
-        // decryptData(key, encrypted);
-    })
-    .catch((error) => {
-        console.error("Error encrypting data:", error);
-    });
+    );
     return encryptedData;
 }
 
@@ -78,21 +69,34 @@ async function encryptData(message, keyInput) {
 
 // Decrypt data
 async function decryptData(key, encrypted) {
-    const decryptedDate = await window.crypto.subtle.decrypt(
+    const resolvedKey = await makeKey(key);
+
+    const decryptedData = await window.crypto.subtle.decrypt(
         {
         name: "AES-GCM",
-        iv: ivTest2
+        iv: iv
         },
-        key,
+        resolvedKey,
         encrypted
-    )
-    .catch((error) => {
-        console.error("Error decrypting data:", error);
-    });
+        // encDataBuffer
+    );
     return decryptedData;
 }
 
-const encData = encryptData(myData, keyInput);
+async function getDecryptedData(myData, keyInput) {
+    const encData = await encryptData(myData, keyInput);
+    const textDecoder = new TextDecoder('utf-8');
+    encDataString = textDecoder.decode(encData);
+    console.log('encoded data: ', encDataString);
+    const decData = decryptData(keyInput, encData)
+            .then((clearData) => {
+                const textDecoder = new TextDecoder('utf-8');
+                decodedData = textDecoder.decode(clearData);
+                console.log('decoded data: ', decodedData);
+            });
+}
+
+getDecryptedData(myData, keyInput);
 
 </script>
 </html>
