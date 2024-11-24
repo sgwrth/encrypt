@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+        body {
+            background-color: #909090;
+        }
+    </style>
+</head>
+<body>
+    <h1>Encrypt/Decrypt</h1>
+    <p>Using WCA</p>
+</body>
+<script>
+
+const myData = '0123456789abcdefghijklmnopqrstuvwxyz';
+const ivInput = 'foo';
+const iv = ivInput + ivInput + ivInput + ivInput;
+console.log(iv);
+const ivTest2 = new TextEncoder('utf-8').encode(iv);
+
+function encryptData(message, key) {
+    console.log('plaintext message: ', message);
+    const encodedMessage = new TextEncoder().encode(message);
+
+    window.crypto.subtle.encrypt(
+        {
+            name: "AES-GCM",
+            iv: ivTest2
+        },
+        key,
+        encodedMessage
+    )
+    .then((encrypted) => {
+        console.log(new TextDecoder('utf-8').decode(encrypted));
+        decryptData(key, encrypted);
+    })
+    .catch((error) => {
+        console.error("Error encrypting data:", error);
+    });
+}
+
+window.crypto.subtle.generateKey(
+    {
+        name: "AES-GCM",
+        length: 256,
+    },
+    true,
+    ["encrypt", "decrypt"]
+)
+.then((key) => {
+        encryptData(myData, key);
+    })
+.catch((error) => {
+    console.error("Error generating key:", error);
+});
+
+
+// Decrypt data
+function decryptData(key, encrypted) {
+    window.crypto.subtle.decrypt(
+        {
+        name: "AES-GCM",
+        iv: ivTest2
+        },
+        key,
+        encrypted
+    )
+    .then((decrypted) => {
+        const decodedMessage = new TextDecoder().decode(decrypted);
+        console.log("Decrypted data:", decodedMessage);
+    })
+    .catch((error) => {
+        console.error("Error decrypting data:", error);
+    });
+}
+
+</script>
+</html>
