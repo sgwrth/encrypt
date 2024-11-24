@@ -19,46 +19,66 @@ const iv = ivInput + ivInput + ivInput + ivInput;
 console.log(iv);
 const ivTest2 = new TextEncoder('utf-8').encode(iv);
 
-function encryptData(message, key) {
-    console.log('plaintext message: ', message);
-    const encodedMessage = new TextEncoder().encode(message);
+const keyInput = 'abcdefghabcdefghabcdefgh';
 
-    window.crypto.subtle.encrypt(
+async function makeKey(keyInput) {
+    const keyBase64 = btoa(keyInput);
+    console.log('keyBase64: ', keyBase64);
+    const keyBuffer = new Uint8Array(keyBase64.length);
+    for (let i = 0; i < keyBase64.length; i++) {
+        keyBuffer[i] = String.fromCharCode(keyBase64.charCodeAt(i));
+    }
+    console.log('buffer: ', keyBuffer.length);
+    const cryptoKey = await window.crypto.subtle.importKey(
+        'raw',
+        keyBuffer,
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    );
+    return cryptoKey;
+};
+
+async function encryptData(message, keyInput) {
+    const resolvedKey = await makeKey(keyInput);
+    const encodedMessage = new TextEncoder().encode(message);
+    const encryptedData = await window.crypto.subtle.encrypt(
         {
             name: "AES-GCM",
             iv: ivTest2
         },
-        key,
+        resolvedKey,
         encodedMessage
     )
     .then((encrypted) => {
         console.log(new TextDecoder('utf-8').decode(encrypted));
-        decryptData(key, encrypted);
+        // decryptData(key, encrypted);
     })
     .catch((error) => {
         console.error("Error encrypting data:", error);
     });
+    return encryptedData;
 }
 
-window.crypto.subtle.generateKey(
-    {
-        name: "AES-GCM",
-        length: 256,
-    },
-    true,
-    ["encrypt", "decrypt"]
-)
-.then((key) => {
-        encryptData(myData, key);
-    })
-.catch((error) => {
-    console.error("Error generating key:", error);
-});
+// window.crypto.subtle.generateKey(
+//     {
+//         name: "AES-GCM",
+//         length: 256,
+//     },
+//     true,
+//     ["encrypt", "decrypt"]
+// )
+// .then((key) => {
+//         encryptData(myData, key);
+//     })
+// .catch((error) => {
+//     console.error("Error generating key:", error);
+// });
 
 
 // Decrypt data
-function decryptData(key, encrypted) {
-    window.crypto.subtle.decrypt(
+async function decryptData(key, encrypted) {
+    const decryptedDate = await window.crypto.subtle.decrypt(
         {
         name: "AES-GCM",
         iv: ivTest2
@@ -66,14 +86,13 @@ function decryptData(key, encrypted) {
         key,
         encrypted
     )
-    .then((decrypted) => {
-        const decodedMessage = new TextDecoder().decode(decrypted);
-        console.log("Decrypted data:", decodedMessage);
-    })
     .catch((error) => {
         console.error("Error decrypting data:", error);
     });
+    return decryptedData;
 }
+
+const encData = encryptData(myData, keyInput);
 
 </script>
 </html>
