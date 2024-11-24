@@ -10,93 +10,135 @@
 <body>
     <h1>Encrypt/Decrypt</h1>
     <p>Using WCA</p>
+    <hr>
+    <label for="dataInput">IV</label>
+    <div>
+        <input id="dataInput" type="text" placeholder="Data" />
+    </div>
+    <br />
+
+    <label for="ivInput">IV</label>
+    <div>
+        <input id="ivInput" type="text" placeholder="IV" />
+    </div>
+    <br />
+
+    <label for="keyInput">Key</label>
+    <div>
+        <input id="keyInput" type="text" placeholder="Key" />
+    </div>
+    <br />
+
+    <label for="encryptBtn">Encrypt Data</label>
+    <div>
+        <button id="encryptBtn" type="button">Encrypt</button>
+    </div>
+    <br />
+
+    <label for="encData">Encrypted Data</label>
+    <div>
+        <div id="encData"></div>
+    </div>
+    <br />
+
+    <label for="decData">Decrypted Data</label>
+    <div>
+        <div id="decData"></div>
+    </div>
 </body>
 <script>
 
 const myData = '0123456789abcdefghijklmnopqrstuvwxyz';
 const myIv = 'foo';
-const myIvExpanded = myIv + myIv + myIv + myIv;
-const iv = new TextEncoder('utf-8').encode(myIvExpanded);
+const myKey = 'abcdefghabcdefghabcdefgh';
 
-const keyInput = 'abcdefghabcdefghabcdefgh';
+const encryptBtn = document.getElementById('encryptBtn');
+encryptBtn.addEventListener('click', () => {
+    getDecryptedData(makeIv('hurzhurzhurz'), 'bleh', 'barbarbarbarbarbarbarbar');
+});
 
-async function makeKey(keyInput) {
-    const keyBase64 = btoa(keyInput);
-    const keyBuffer = new Uint8Array(keyBase64.length);
-    for (let i = 0; i < keyBase64.length; i++) {
-        keyBuffer[i] = String.fromCharCode(keyBase64.charCodeAt(i));
+function bufferFromString(string) {
+    const textEncoder = new TextEncoder()
+    return textEncoder.encode(string);
+}
+
+function base64BufferFromString(string) {
+    const base64String = btoa(string);
+    const base64Buffer = new Uint8Array(base64String.length);
+    for (let i = 0; i < base64String.length; i++) {
+        base64Buffer[i] = String.fromCharCode(base64String.charCodeAt(i));
     }
+    return base64Buffer;
+}
+
+function makeIv(myIv) {
+    const myIvExpanded = myIv + myIv + myIv + myIv;
+    const iv = new TextEncoder('utf-8').encode(myIvExpanded);
+    return iv;
+}
+
+async function makeKey(myKey) {
+    const keyBuffer = base64BufferFromString(myKey);
     const cryptoKey = await window.crypto.subtle.importKey(
         'raw',
         keyBuffer,
-        { name: 'AES-GCM', length: 256 },
+        {
+            name: 'AES-GCM',
+            length: 256
+        },
         true,
         ['encrypt', 'decrypt']
     );
     return cryptoKey;
 };
 
-async function encryptData(message, keyInput) {
-    console.log('plaintext data: ', myData);
-    const resolvedKey = await makeKey(keyInput);
-    const encodedMessage = new TextEncoder().encode(message);
+async function encryptData(iv, data, key) {
+    console.log('plaintext data: ', data);
+    const cryptoKey = await makeKey(key);
     const encryptedData = await window.crypto.subtle.encrypt(
         {
             name: "AES-GCM",
             iv: iv
         },
-        resolvedKey,
-        encodedMessage
+        cryptoKey,
+        bufferFromString(data)
     );
     return encryptedData;
 }
 
-// window.crypto.subtle.generateKey(
-//     {
-//         name: "AES-GCM",
-//         length: 256,
-//     },
-//     true,
-//     ["encrypt", "decrypt"]
-// )
-// .then((key) => {
-//         encryptData(myData, key);
-//     })
-// .catch((error) => {
-//     console.error("Error generating key:", error);
-// });
-
-
-// Decrypt data
-async function decryptData(key, encrypted) {
-    const resolvedKey = await makeKey(key);
-
+async function decryptData(iv, key, encryptedData) {
+    const cryptoKey = await makeKey(key);
     const decryptedData = await window.crypto.subtle.decrypt(
         {
-        name: "AES-GCM",
-        iv: iv
+            name: "AES-GCM",
+            iv: iv
         },
-        resolvedKey,
-        encrypted
-        // encDataBuffer
+        cryptoKey,
+        encryptedData
     );
     return decryptedData;
 }
 
-async function getDecryptedData(myData, keyInput) {
-    const encData = await encryptData(myData, keyInput);
+function stringFromBuffer(buffer) {
     const textDecoder = new TextDecoder('utf-8');
-    encDataString = textDecoder.decode(encData);
-    console.log('encoded data: ', encDataString);
-    const decData = decryptData(keyInput, encData)
-            .then((clearData) => {
-                const textDecoder = new TextDecoder('utf-8');
-                decodedData = textDecoder.decode(clearData);
-                console.log('decoded data: ', decodedData);
+    return textDecoder.decode(buffer);
+}
+
+async function getDecryptedData(iv, myData, myKey) {
+    const encData = await encryptData(iv, myData, myKey);
+    console.log('encoded data: ', stringFromBuffer(encData));
+    const encDataDiv = document.getElementById('encData');
+    encDataDiv.innerHTML = stringFromBuffer(encData);
+    const decData = decryptData(iv, myKey, encData)
+            .then((data) => {
+                console.log('decoded data: ', stringFromBuffer(data));
+                const decDataDiv = document.getElementById('decData');
+                decDataDiv.innerHTML = stringFromBuffer(data);
             });
 }
 
-getDecryptedData(myData, keyInput);
+// getDecryptedData(makeIv(myIv), myData, myKey);
+// getDecryptedData(makeIv('hurzhurzhurz'), 'bleh', 'barbarbarbarbarbarbarbar');
 
 </script>
 </html>
