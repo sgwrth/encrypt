@@ -3,7 +3,7 @@
 <head>
     <style>
         body {
-            background-color: #909090;
+            background-color: #ffffff;
         }
     </style>
 </head>
@@ -15,19 +15,19 @@
 
     <label for="dataInput">Data</label>
     <div>
-        <input id="dataInput" type="text" placeholder="Data" />
+        <input id="dataInput" type="text" />
     </div>
     <br />
 
     <label for="ivInput">IV</label>
     <div>
-        <input id="ivInput" type="text" placeholder="IV" />
+        <input id="ivInput" type="text" />
     </div>
     <br />
 
     <label for="keyInput">Key</label>
     <div>
-        <input id="keyInput" type="text" placeholder="Key" />
+        <input id="keyInput" type="text" />
     </div>
     <br />
 
@@ -51,7 +51,7 @@
 
     <label for="encDataInput">Encrypted Data</label>
     <div>
-        <input id="encDataInput" type="text" placeholder="Encrypted Data" />
+        <input id="encDataInput" type="text" />
     </div>
     <br />
 
@@ -78,20 +78,34 @@ const decryptBtn = document.getElementById('decryptBtn');
 const decDataDiv = document.getElementById('decData');
 
 encryptBtn.addEventListener('click', async () => {
-    const ciphertext = await createEncryptedData(
+    createEncryptedData(
             String(ivInput.value),
             String(dataInput.value),
-            String(keyInput.value));
-    encData.innerHTML = ciphertext;
+            String(keyInput.value)
+    ).then((data) => {
+        encData.innerHTML = data;
+    }).catch((err) => {
+        console.error(err);
+        encDataDiv.innerHTML = `<span style="color: #ff0000"><strong>`
+                + `Error. Missing IV? Wrong Key length? (Must be 8 characters.)`
+                + `</strong><span>`;
+    });
 });
 
 decryptBtn.addEventListener('click', async () => {
-    const decryptedData = await decryptCiphertext(
+    decryptCiphertext(
             String(ivInput.value),
             String(keyInput.value),
-            String(encDataInput.value));
-    console.log(decryptedData);
-    decData.innerHTML = decryptedData;
+            String(encDataInput.value)
+    ).then((data) => {
+        decData.innerHTML = data;
+    })
+    .catch((err) => {
+        console.error(err);
+        decData.innerHTML = `<span style="color: #ff0000"><strong>`
+                + `Error. Wrong or missing IV/Key?`
+                + `</strong><span>`;
+    });
 });
 
 function bufferFromString(string) {
