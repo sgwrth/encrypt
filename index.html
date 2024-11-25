@@ -31,7 +31,6 @@
     </div>
     <br />
 
-    <label for="encryptBtn">Encrypt Data</label>
     <div>
         <button id="encryptBtn" type="button">Encrypt</button>
     </div>
@@ -41,55 +40,58 @@
     <div>
         <div id="encData"></div>
     </div>
-    <br />
 
-    <label for="decData">Decrypted Data</label>
-    <div>
-        <div id="decData"></div>
-    </div>
-
-    <hr>
-
-    <label for="encDataInput">Encoded Data</label>
-    <div>
-        <input id="encDataInput" type="text" placeholder="Encoded Data" />
-    </div>
-    <br />
-
-    <label for="decryptBtn">Decrypt Data</label>
-    <div>
-        <button id="decryptBtn" type="button">Decrypt</button>
-    </div>
-    
     <hr>
 
     <label for="binInput">Binary File</label>
     <div>
         <input id="binInput" type="file" />
     </div>
+    <br />
 
+    <label for="encDataInput">Encrypted Data</label>
+    <div>
+        <input id="encDataInput" type="text" placeholder="Encrypted Data" />
+    </div>
+    <br />
+
+    <div>
+        <button id="decryptBtn" type="button">Decrypt</button>
+    </div>
+    <br />
+
+    <label for="decData">Decrypted Data</label>
+    <div>
+        <div id="decData"></div>
+    </div>
+   
 </body>
 <script>
 
-// const myData = '0123456789abcdefghijklmnopqrstuvwxyz';
-// const myIv = 'foo';
-// const myKey = 'abcdefghabcdefghabcdefgh';
-
-// not working
+const dataInput = document.getElementById('dataInput');
+const ivInput = document.getElementById('ivInput');
+const keyInput = document.getElementById('keyInput');
+const encryptBtn = document.getElementById('encryptBtn');
+const encDataInput = document.getElementById('encDataInput');
+const encDataDiv = document.getElementById('encData');
 const decryptBtn = document.getElementById('decryptBtn');
-decryptBtn.addEventListener('click', async () => {
-    const encryptedData = String(document.getElementById('encDataInput').value);
-    console.log('encrypted data: ', encryptedData);
-    const decryptedData = await decryptData(
-            makeIv(String(document.getElementById('ivInput').value)),
-            String(document.getElementById('keyInput').value),
-            bufferFromString(encryptedData));
-    // console.log(stringFromBuffer(decryptedData));
+const decDataDiv = document.getElementById('decData');
+
+encryptBtn.addEventListener('click', async () => {
+    const ciphertext = await createEncryptedData(
+            String(ivInput.value),
+            String(dataInput.value),
+            String(keyInput.value));
+    encData.innerHTML = ciphertext;
 });
 
-const encryptBtn = document.getElementById('encryptBtn');
-encryptBtn.addEventListener('click', () => {
-    getDecryptedData('hurzhurzhurz', 'bleh', 'barbarbarbarbarbarbarbarabcdefgh');
+decryptBtn.addEventListener('click', async () => {
+    const decryptedData = await decryptCiphertext(
+            String(ivInput.value),
+            String(keyInput.value),
+            String(encDataInput.value));
+    console.log(decryptedData);
+    decData.innerHTML = decryptedData;
 });
 
 function bufferFromString(string) {
@@ -97,24 +99,14 @@ function bufferFromString(string) {
     return textEncoder.encode(string);
 }
 
-// function base64BufferFromString(string) {
-//     const base64String = btoa(string);
-//     const base64Buffer = new Uint8Array(base64String.length);
-//     for (let i = 0; i < base64String.length; i++) {
-//         base64Buffer[i] = String.fromCharCode(base64String.charCodeAt(i));
-//     }
-//     return base64Buffer;
-// }
-
 function makeIv(myIv) {
-    const myIvExpanded = myIv + myIv + myIv + myIv;
+    const myIvExpanded = myIv + myIv + myIv + myIv + myIv + myIv;
     const iv = new TextEncoder('utf-8').encode(myIvExpanded);
     return iv;
 }
 
 async function makeKey(myKey) {
-    // const keyBuffer = base64BufferFromString(myKey);
-    const keyBuffer = bufferFromString(myKey);
+    const keyBuffer = bufferFromString(myKey + myKey + myKey + myKey);
     const cryptoKey = await window.crypto.subtle.importKey(
         'raw',
         keyBuffer,
@@ -129,12 +121,11 @@ async function makeKey(myKey) {
 };
 
 async function encryptData(iv, data, key) {
-    console.log('plaintext data: ', data);
     const cryptoKey = await makeKey(key);
     const encryptedData = await window.crypto.subtle.encrypt(
         {
             name: "AES-GCM",
-            iv: iv
+            iv: makeIv(iv)
         },
         cryptoKey,
         bufferFromString(data)
@@ -163,114 +154,34 @@ function stringFromBuffer(buffer) {
 const binInput = document.getElementById('binInput');
 binInput.addEventListener('change', (event) => {
     const files = binInput.files;
-    // loadBinFile(event);
     const reader = new FileReader();
     reader.onload = (event) => {
-        const binaryData = event.target.result;
-        console.log(binaryData);
+        const ciphertext = event.target.result;
+        console.log('ciphertext from input:', ciphertext);
+        document.getElementById('encDataInput').value = ciphertext;
     }
-    reader.readAsBinaryString(files[0]);
+    reader.readAsText(files[0]);
 });
-   
-function loadBinFile(event) {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        const binaryData = event.target.result;
-    }
-    reader.readAsBinaryString(files[0]);
-}
-
-
-async function getDecryptedData(iv, myData, myKey) {
-    iv = makeIv(iv);
+ 
+async function createEncryptedData(iv, myData, myKey) {
     const encData = await encryptData(iv, myData, myKey);
-    // console.log('encData', encData);
-
     const ciphertextArray = Array.from(new Uint8Array(encData));
     console.log('ciphertextArray:', ciphertextArray);
     const ciphertextString = ciphertextArray.map(byte => String.fromCharCode(byte)).join('');
     console.log('ciphertextString:', ciphertextString);
     const ciphertextBase64String = btoa(ciphertextString);
     console.log('ciphertextBase64String:', ciphertextBase64String);
-
-    // const encDataUint16 = new TextDecoder('base64').decode(encData);
-    // console.log('encDataUint16: ', encDataUint16);
-    // const encDataStr = new Uint16Array(encDataUint16).toString();
-    // console.log('encDataStr: ', encDataStr);
-
-    // const uint8View = new Uint8Array(encData);
-    // console.log('encData ArrayBuffer: ', uint8View);
-    // const binaryString = Array.prototype.map.call(uint8View, (c) => String.fromCharCode(c)).join('');
-    // console.log('encData binary string: ', binaryString);
-
-    // const FileWriter = require('filewriter');
-    // const blob = new Blob([binaryString], { type: 'application/octet-stream' });
-
-    // const binaryString = Array.prototype.map.call(uint8View, (c) => String.fromCharCode(c)).join('');
-    // console.log('binary string: ', binaryString);
-
-    // const blob2 = new Blob(uint8View, { type: 'application/octet-stream' });
-
-    // const url = URL.createObjectURL(blob);
-    // const a = document.createElement('a');
-    // a.href = url;
-    // a.download = 'example.bin';
-    // a.click();
-    // URL.revokeObjectURL(url);
-
-    // encDataString = btoa(encData);
-    // const encDataString = btoa(String.fromCharCode(...new Uint8Array(encData)));
-    // console.log('encData after btoa: ', encDataString);
-    // const encDataDiv = document.getElementById('encData');
-    // encDataDiv.innerHTML = encDataString;
-    
-    // const ciphertext = atob(encDataString);
-    // const ciphertextBuffer = new TextEncoder('utf-8').encode(ciphertext).buffer;
-    // console.log(ciphertextBuffer);
-    // const base64Buffer = new Uint8Array(ciphertextBuffer.length).buffer;
-    // for (let i = 0; i < ciphertextBuffer.length; i++) {
-        // base64Buffer[i] = String.fromCharCode(ciphertextBuffer.charCodeAt(i));
-    // }
-
-    // console.log('ciphertextBuffer', ciphertextBuffer);
- 
-    // const decData = decryptData(iv, myKey, encData)
-
-    // const encoder = new TextEncoder('utf-8');
-    // const binStringArray = encoder.encode('Îš™&yžÕ(¿*ììipåˆå¿aI');
-    // const base64String = new TextDecoder().decode(binStringArray); 
-
-    // const encDataString = btoa(unescape(encodeURIComponent('Îš™&yžÕ(¿*ììipåˆå¿aI')));
-    // console.log('encDataString: ', encDataString);
-    // const encDataBuffer = new TextEncoder().encode(encDataString);
-    // console.log('encDataBuffer: ', encDataBuffer);
-
-    // const fromBase64 = (str) =>  {
-    //     return Uint8Array.from(atob(str), c => c.charCodeAt(0));
-    // }
-
-    // const decData = decryptData(iv, myKey, encData)
-    const ciphertextDecoded = atob('/SjyMjncApPd4ix7b/UnjxI0M9U=');
-    const ciphertextUint = new Uint8Array(ciphertextDecoded.match(/[\s\S]/g).map(ch => ch.charCodeAt(0)));
-    const decData = decryptData(iv, myKey, ciphertextUint)
-            .then((data) => {
-                console.log('decoded data: ', stringFromBuffer(data));
-                const decDataDiv = document.getElementById('decData');
-                decDataDiv.innerHTML = stringFromBuffer(data);
-            })
-            .catch((err) => console.error(err));
+    return ciphertextBase64String;
 }
 
 async function decryptCiphertext(iv, key, ciphertext) {
     const ciphertextDecoded = atob(ciphertext);
-    const ciphertextUint
-            = new Uint8Array(ciphertextDecoded.match(/[\s\S]/g).map(ch => ch.charCodeAt(0)));
-    await decryptData(iv, key, ciphertextUint)
-        .then((data) => console.log('...: ', stringFromBuffer(data)))
-        .catch((err) => console.error(err));
+    const ciphertextUint =
+            new Uint8Array(ciphertextDecoded.match(/[\s\S]/g).map(ch => ch.charCodeAt(0)));
+    const decryptedData = await decryptData(iv, key, ciphertextUint);
+    console.log('from function: ', stringFromBuffer(decryptedData));
+    return stringFromBuffer(decryptedData);
 }
-
-decryptCiphertext('hurzhurzhurz', 'barbarbarbarbarbarbarbarabcdefgh', '/SjyMjncApPd4ix7b/UnjxI0M9U=');
 
 </script>
 </html>
